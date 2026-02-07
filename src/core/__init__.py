@@ -1,42 +1,18 @@
 """
-Core framework components for AI FP&A system.
+Core module for AI FP&A system security implementations.
 
-Includes:
-- Database session management
-- Secrets management (AWS Secrets Manager)
-- Audit logging (immutable S3 logs)
-- Encryption utilities
-- Access control
-- Configuration
+This module provides:
+- Data encryption (Finding #6)
+- Role-based access control (Finding #7)
+- Human oversight framework (Finding #8)
 """
 
-from .config import settings
-from .database import DatabaseSession, get_db
-from .secrets import SecretsManager
-from .audit_trail import ImmutableAuditLog
-from .encryption import FieldEncryption
-from .access_control import AccessController
-from .models import (
-    Entity,
-    TrialBalance,
-    ConsolidatedBalance,
-    JournalEntry,
-    ETLBatch,
-    ValidationResult,
-)
+# Security implementations can be imported independently
+# No automatic imports to avoid dependency issues
 
+__version__ = "1.0.0"
 __all__ = [
-    "settings",
-    "DatabaseSession",
-    "get_db",
-    "SecretsManager",
-    "ImmutableAuditLog",
-    "FieldEncryption",
-    "AccessController",
-    "Entity",
-    "TrialBalance",
-    "ConsolidatedBalance",
-    "JournalEntry",
-    "ETLBatch",
-    "ValidationResult",
+    'encryption',
+    'access_control',
+    'human_oversight'
 ]

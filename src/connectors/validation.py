@@ -4,7 +4,7 @@ Data validation module for ERP connector responses.
 Validates and normalizes data from different ERP systems into standard formats.
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 from decimal import Decimal, InvalidOperation
 from typing import Any, Dict, List, Optional, Set
 import logging
@@ -336,7 +336,7 @@ class TrialBalanceValidator:
             "period_end": period_end,
             "currency": currency,
             "accounts": validated_accounts,
-            "extracted_at": datetime.utcnow(),
+            "extracted_at": datetime.now(timezone.utc),
             "metadata": data.get("metadata", {}),
         }
 

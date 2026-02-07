@@ -165,8 +165,8 @@ class IntercompanyTransaction:
 @dataclass
 class EliminationEntry:
     """Journal entry for intercompany elimination."""
-    elimination_id: str = field(default_factory=lambda: str(uuid4()))
     intercompany_transaction: IntercompanyTransaction
+    elimination_id: str = field(default_factory=lambda: str(uuid4()))
     period_end_date: date = field(default_factory=date.today)
     debit_account: str = ""
     credit_account: str = ""

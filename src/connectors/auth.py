@@ -8,7 +8,7 @@ import asyncio
 import time
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Dict, Optional
 import logging
 
@@ -26,7 +26,7 @@ class TokenInfo:
     expires_in: int = 3600
     refresh_token: Optional[str] = None
     scope: Optional[str] = None
-    issued_at: datetime = field(default_factory=datetime.utcnow)
+    issued_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
 
     def is_expired(self, buffer_seconds: int = 300) -> bool:
         """
@@ -39,7 +39,7 @@ class TokenInfo:
             True if token is expired or about to expire
         """
         expiry_time = self.issued_at + timedelta(seconds=self.expires_in - buffer_seconds)
-        return datetime.utcnow() >= expiry_time
+        return datetime.now(timezone.utc) >= expiry_time
 
     def to_dict(self) -> Dict[str, str]:
         """Convert to dictionary for serialization"""

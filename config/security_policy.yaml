@@ -1,0 +1,575 @@
+# Security Policy Configuration for AI FP&A System
+# Addresses Findings #6, #7, #8
+# Version: 1.0
+# Last Updated: 2026-02-07
+
+# =============================================================================
+# FINDING #6: DATA ENCRYPTION CONFIGURATION
+# =============================================================================
+encryption:
+  # Encryption standards
+  standards:
+    algorithm: "AES-256-GCM"
+    key_size: 256
+    tls_version: "1.3"
+    tls_fallback: "1.2"
+    
+  # Key rotation policy
+  key_rotation:
+    enabled: true
+    rotation_interval_days: 90
+    notification_before_days: 14
+    auto_rotation: true
+    
+  # AWS KMS Configuration
+  kms:
+    enabled: true
+    master_key_id: "${AWS_KMS_MASTER_KEY_ID}"
+    s3_key_id: "${AWS_KMS_S3_KEY_ID}"
+    key_alias: "alias/fpa-master-key"
+    multi_region: true
+    
+  # TLS Configuration for ERP APIs
+  tls:
+    minimum_version: "TLSv1_2"
+    preferred_version: "TLSv1_3"
+    cipher_suites:
+      - "ECDHE-ECDSA-AES256-GCM-SHA384"
+      - "ECDHE-RSA-AES256-GCM-SHA384"
+      - "ECDHE-ECDSA-CHACHA20-POLY1305"
+      - "ECDHE-RSA-CHACHA20-POLY1305"
+      - "ECDHE-ECDSA-AES128-GCM-SHA256"
+      - "ECDHE-RSA-AES128-GCM-SHA256"
+    verify_certificates: true
+    check_hostname: true
+    
+  # PostgreSQL Encryption
+  postgresql:
+    ssl_mode: "require"
+    ssl_cert_verification: true
+    connection_encryption: true
+    enable_pgcrypto: true
+    
+    # Transparent Data Encryption (TDE)
+    tde:
+      enabled: true
+      method: "pgcrypto"
+      
+    # Column-level encryption
+    encrypted_columns:
+      - table: "financials"
+        columns:
+          - "revenue"
+          - "net_income"
+          - "ebitda"
+        field_type: "revenue"
+        
+      - table: "customers"
+        columns:
+          - "customer_name"
+          - "tax_id"
+          - "bank_account"
+        field_type: "customer_data"
+        
+      - table: "employees"
+        columns:
+          - "ssn"
+          - "salary"
+          - "bank_account"
+        field_type: "employee_pii"
+        
+      - table: "api_credentials"
+        columns:
+          - "api_key"
+          - "api_secret"
+          - "password"
+        field_type: "api_credentials"
+        
+      - table: "forecasts"
+        columns:
+          - "revenue_forecast"
+          - "ebitda_forecast"
+        field_type: "financial_forecast"
+        
+  # S3 Encryption Configuration
+  s3:
+    server_side_encryption: "aws:kms"
+    bucket_key_enabled: true
+    enforce_encryption: true
+    
+    # Backup bucket configuration
+    backup_bucket:
+      name: "${S3_BACKUP_BUCKET}"
+      versioning: true
+      object_lock: true
+      lifecycle:
+        transition_to_glacier_days: 90
+        expiration_days: 2555  # 7 years for compliance
+        
+  # Backup Encryption
+  backups:
+    encryption_required: true
+    double_encryption: true  # Application-level + S3 KMS
+    backup_key_rotation_days: 30
+    retention_years: 7
+    test_restoration_monthly: true
+
+# =============================================================================
+# FINDING #7: ROLE-BASED ACCESS CONTROL (RBAC)
+# =============================================================================
+rbac:
+  # Enable RBAC system-wide
+  enabled: true
+  
+  # Role definitions
+  roles:
+    orchestrator:
+      description: "Master orchestrator with full operational access"
+      permissions:
+        - "read_raw_data"
+        - "write_raw_data"
+        - "read_consolidated_data"
+        - "write_consolidated_data"
+        - "create_journal_entry"
+        - "run_variance_analysis"
+        - "create_forecast"
+        - "generate_report"
+        - "execute_batch_job"
+        - "access_api"
+        - "view_audit_logs"
+      data_access_level: "confidential"
+      companies: null  # All companies
+      
+    data_ingestion:
+      description: "ERP data ingestion - write only to assigned source"
+      permissions:
+        - "read_raw_data"
+        - "write_raw_data"
+        - "access_api"
+      data_access_level: "internal"
+      row_level_filter: "source_system = current_setting('app.agent_source')"
+      companies: null
+      
+    consolidation:
+      description: "Financial consolidation - read raw, write consolidated"
+      permissions:
+        - "read_raw_data"
+        - "read_consolidated_data"
+        - "write_consolidated_data"
+        - "create_journal_entry"
+        - "access_api"
+      data_access_level: "confidential"
+      companies: null
+      
+    validation:
+      description: "Data quality validation - read-only access"
+      permissions:
+        - "read_raw_data"
+        - "read_consolidated_data"
+        - "access_api"
+      data_access_level: "confidential"
+      companies: null
+      
+    analysis:
+      description: "Variance and KPI analysis - read consolidated data"
+      permissions:
+        - "read_consolidated_data"
+        - "run_variance_analysis"
+        - "access_api"
+      data_access_level: "confidential"
+      companies: null
+      
+    forecasting:
+      description: "Forecasting - read historical, create forecasts"
+      permissions:
+        - "read_consolidated_data"
+        - "create_forecast"
+        - "modify_assumptions"
+        - "access_api"
+      data_access_level: "confidential"
+      companies: null
+      
+    reporting:
+      description: "Report generation - read and export consolidated data"
+      permissions:
+        - "read_consolidated_data"
+        - "generate_report"
+        - "export_data"
+        - "access_api"
+      data_access_level: "confidential"
+      companies: null
+      
+    compliance:
+      description: "Compliance monitoring - read-only with audit access"
+      permissions:
+        - "read_raw_data"
+        - "read_consolidated_data"
+        - "view_audit_logs"
+        - "access_api"
+      data_access_level: "restricted"
+      companies: null
+      
+    human_reviewer:
+      description: "Human FP&A reviewer - approval authority"
+      permissions:
+        - "read_raw_data"
+        - "read_consolidated_data"
+        - "read_sensitive_data"
+        - "approve_journal_entry"
+        - "reverse_journal_entry"
+        - "close_period"
+        - "reopen_period"
+        - "view_audit_logs"
+        - "share_report"
+      data_access_level: "restricted"
+      companies: null
+      
+    system_admin:
+      description: "System administrator - full access"
+      permissions: "all"
+      data_access_level: "restricted"
+      companies: null
+      
+    read_only:
+      description: "Read-only access for auditors and viewers"
+      permissions:
+        - "read_consolidated_data"
+        - "generate_report"
+      data_access_level: "internal"
+      companies: null
+      
+  # API Key Configuration
+  api_keys:
+    enabled: true
+    key_prefix: "fpa_"
+    key_length: 43  # 32 bytes base64
+    default_expiration_days: 90
+    max_expiration_days: 365
+    rotation_warning_days: 14
+    
+    # API key scoping
+    scoping:
+      by_role: true
+      by_company: true
+      by_ip: false  # Set to true for production
+      
+  # Row-Level Security (RLS)
+  row_level_security:
+    enabled: true
+    enforce_in_database: true
+    
+    # Company-level isolation
+    company_isolation:
+      enabled: true
+      filter_column: "company_id"
+      session_variable: "app.allowed_companies"
+      
+  # Audit Logging
+  audit_logging:
+    enabled: true
+    log_all_access: true
+    log_permission_violations: true
+    log_failed_auth: true
+    retention_days: 2555  # 7 years
+    
+    # What to log
+    events:
+      - "permission_check"
+      - "permission_violation"
+      - "api_key_created"
+      - "api_key_revoked"
+      - "api_key_used"
+      - "data_access"
+      - "data_modification"
+      - "role_assignment"
+      - "security_setting_change"
+
+# =============================================================================
+# FINDING #8: HUMAN OVERSIGHT CONFIGURATION
+# =============================================================================
+human_oversight:
+  # Enable human oversight system
+  enabled: true
+  
+  # Confidence scoring thresholds
+  confidence_thresholds:
+    green: 0.80  # >= 80% confidence
+    yellow: 0.50  # 50-79% confidence
+    # < 50% = red
+    
+  # Risk-based sampling rates (not random!)
+  sampling:
+    green: 0.05  # 5% post-review sampling
+    yellow: 1.00  # 100% mandatory pre-review
+    red: 1.00  # 100% mandatory pre-review with escalation
+    
+  # Materiality thresholds by company size
+  materiality_thresholds:
+    small:
+      amount: 10000
+      currency: "USD"
+    medium:
+      amount: 50000
+      currency: "USD"
+    large:
+      amount: 250000
+      currency: "USD"
+    enterprise:
+      amount: 1000000
+      currency: "USD"
+      
+  # Risk factor weights (must sum to 1.0)
+  risk_factors:
+    materiality:
+      weight: 0.30
+      description: "Transaction amount relative to materiality threshold"
+      
+    pattern_deviation:
+      weight: 0.25
+      description: "Deviation from historical transaction patterns"
+      
+    data_quality:
+      weight: 0.20
+      description: "Data quality and completeness score"
+      
+    complexity:
+      weight: 0.15
+      description: "Transaction complexity and special handling"
+      
+    variance:
+      weight: 0.10
+      description: "Variance from budgeted or forecasted amounts"
+      
+  # Mandatory review categories
+  mandatory_review:
+    - category: "period_close"
+      description: "Monthly/quarterly period close operations"
+      required_reviewers: 2
+      escalation_level: "fpa_manager"
+      
+    - category: "intercompany_elimination"
+      description: "Intercompany transaction eliminations"
+      required_reviewers: 2
+      escalation_level: "fpa_manager"
+      
+    - category: "regulatory_report"
+      description: "External regulatory reporting"
+      required_reviewers: 2
+      escalation_level: "cfo"
+      
+    - category: "external_communication"
+      description: "External financial communications"
+      required_reviewers: 2
+      escalation_level: "cfo"
+      
+    - category: "manual_adjustment"
+      description: "Manual journal entries and adjustments"
+      required_reviewers: 1
+      escalation_level: "fpa_analyst"
+      
+    - category: "variance_exceeds_threshold"
+      description: "Variances exceeding 15% of budget/forecast"
+      required_reviewers: 1
+      escalation_level: "fpa_analyst"
+      threshold: 0.15
+      
+    - category: "first_time_transaction"
+      description: "First occurrence of transaction type"
+      required_reviewers: 1
+      escalation_level: "fpa_analyst"
+      
+    - category: "large_amount"
+      description: "Transactions above materiality threshold"
+      required_reviewers: 1
+      escalation_level: "fpa_analyst"
+      
+  # Four-eyes principle
+  four_eyes:
+    enabled: true
+    required_for:
+      - "period_close"
+      - "intercompany_elimination"
+      - "regulatory_report"
+      - "external_communication"
+      - "red_risk_level"
+    minimum_reviewers: 2
+    same_reviewer_allowed: false
+    
+  # Escalation matrix
+  escalation:
+    levels:
+      - level: 0
+        name: "none"
+        description: "No escalation - auto-approved with sampling"
+        
+      - level: 1
+        name: "fpa_analyst"
+        description: "FP&A Analyst review"
+        sla_hours: 24
+        
+      - level: 2
+        name: "fpa_manager"
+        description: "FP&A Manager review"
+        sla_hours: 12
+        
+      - level: 3
+        name: "cfo"
+        description: "CFO review"
+        sla_hours: 6
+        
+      - level: 4
+        name: "audit_committee"
+        description: "Audit Committee review"
+        sla_hours: 48
+        
+    # Auto-escalation rules
+    auto_escalation:
+      enabled: true
+      escalate_if_overdue: true
+      escalate_if_rejected: true
+      escalate_after_hours: 24
+      
+  # Review workflow
+  review_workflow:
+    notification_enabled: true
+    notification_channels:
+      - "email"
+      - "slack"
+      
+    reminder_schedule:
+      - hours: 12
+        message: "Review pending - 12 hours"
+      - hours: 24
+        message: "Review overdue - escalating"
+        action: "escalate"
+        
+    review_retention_days: 2555  # 7 years
+    
+  # Reporting and metrics
+  oversight_reporting:
+    enabled: true
+    
+    # Generate reports
+    reports:
+      - name: "daily_review_summary"
+        frequency: "daily"
+        recipients:
+          - "fpa_manager"
+          
+      - name: "weekly_oversight_metrics"
+        frequency: "weekly"
+        recipients:
+          - "fpa_manager"
+          - "cfo"
+          
+      - name: "monthly_control_effectiveness"
+        frequency: "monthly"
+        recipients:
+          - "cfo"
+          - "audit_committee"
+          
+    # Metrics to track
+    metrics:
+      - "total_reviews"
+      - "approval_rate"
+      - "average_confidence_score"
+      - "risk_level_breakdown"
+      - "four_eyes_percentage"
+      - "sla_compliance"
+      - "escalation_rate"
+      - "average_review_time"
+
+# =============================================================================
+# COMPLIANCE AND GOVERNANCE
+# =============================================================================
+compliance:
+  frameworks:
+    - "SOC 2 Type II"
+    - "ISO 27001"
+    - "IFRS"
+    - "US GAAP"
+    - "NASDAQ Listing Requirements"
+    
+  data_retention:
+    financial_data_years: 7
+    audit_logs_years: 7
+    backups_years: 7
+    
+  data_classification:
+    levels:
+      - name: "public"
+        encryption_required: false
+        access_logging: false
+        
+      - name: "internal"
+        encryption_required: true
+        access_logging: true
+        
+      - name: "confidential"
+        encryption_required: true
+        access_logging: true
+        approval_required: false
+        
+      - name: "restricted"
+        encryption_required: true
+        access_logging: true
+        approval_required: true
+        
+  # Security monitoring
+  monitoring:
+    enabled: true
+    
+    # Alerts
+    alerts:
+      - event: "multiple_failed_auth"
+        threshold: 5
+        window_minutes: 15
+        severity: "high"
+        
+      - event: "permission_violation"
+        threshold: 3
+        window_minutes: 60
+        severity: "medium"
+        
+      - event: "unusual_data_access"
+        threshold: 1
+        window_minutes: 1
+        severity: "high"
+        
+      - event: "encryption_failure"
+        threshold: 1
+        window_minutes: 1
+        severity: "critical"
+        
+    # Incident response
+    incident_response:
+      enabled: true
+      notification_channels:
+        - "email"
+        - "pagerduty"
+      escalation_minutes: 30
+
+# =============================================================================
+# SYSTEM CONFIGURATION
+# =============================================================================
+system:
+  environment: "${ENVIRONMENT}"  # development, staging, production
+  
+  # Feature flags
+  features:
+    encryption: true
+    rbac: true
+    human_oversight: true
+    audit_logging: true
+    
+  # Security hardening
+  hardening:
+    disable_root_access: true
+    require_mfa: true
+    session_timeout_minutes: 60
+    password_policy:
+      min_length: 16
+      require_special_chars: true
+      require_numbers: true
+      require_uppercase: true
+      expiration_days: 90
