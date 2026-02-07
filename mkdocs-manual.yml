@@ -1,0 +1,102 @@
+site_name: AI FP&A Monthly Close Automation - User Manual
+site_author: Nuvini Group Limited
+site_description: Complete user manual for the AI-powered FP&A monthly close automation system
+site_url: https://github.com/escotilha/nuvini-ai-fpa
+
+# Repository
+repo_name: escotilha/nuvini-ai-fpa
+repo_url: https://github.com/escotilha/nuvini-ai-fpa
+
+# Configuration
+docs_dir: manual
+site_dir: site-manual
+
+# Theme
+theme:
+  name: material
+  palette:
+    - scheme: default
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - scheme: slate
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.expand
+    - navigation.top
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+  icon:
+    repo: fontawesome/brands/github
+
+# Extensions
+markdown_extensions:
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - tables
+  - attr_list
+  - md_in_html
+  - toc:
+      permalink: true
+
+# Navigation
+nav:
+  - Home: index.md
+  - Getting Started:
+      - Overview: getting-started/overview.md
+      - System Requirements: getting-started/requirements.md
+      - Installation: getting-started/installation.md
+      - Quick Start: getting-started/quick-start.md
+      - Architecture: getting-started/architecture.md
+  - User Guide:
+      - Monthly Close Process: user-guide/monthly-close.md
+      - ERP Integration: user-guide/erp-integration.md
+      - Consolidation: user-guide/consolidation.md
+      - Reports & Analytics: user-guide/reports.md
+      - Human Review: user-guide/human-review.md
+      - Troubleshooting: user-guide/troubleshooting.md
+  - Technical Reference:
+      - Database Schema: technical-reference/database.md
+      - API Reference: technical-reference/api-reference.md
+      - ERP Connectors: technical-reference/erp-connectors.md
+      - Consolidation Engine: technical-reference/consolidation-engine.md
+      - Security: technical-reference/security.md
+      - Configuration: technical-reference/configuration.md
+  - Deployment:
+      - AWS Setup: deployment/aws-setup.md
+      - Environment Configuration: deployment/environment.md
+      - PostgreSQL Setup: deployment/postgresql.md
+      - Monitoring: deployment/monitoring.md
+      - Backup & Recovery: deployment/backup-recovery.md
+  - Appendix:
+      - Glossary: appendix/glossary.md
+      - Compliance: appendix/compliance.md
+      - FAQ: appendix/faq.md
+      - Change Log: appendix/changelog.md
+
+# Plugins
+plugins:
+  - search
+
+# Extra
+extra:
+  version: 1.0.0
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/escotilha/nuvini-ai-fpa
